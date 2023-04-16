@@ -1,0 +1,197 @@
+<html>
+<head>
+<title>Motor joc</title>
+<style>
+body{
+display:flex;
+justify-content:center;
+}
+</style>
+</head>
+<body onbeforeunload="Cerrar">
+<canvas id="canvas" width="1200" height="675" style="border:2px solid"></canvas>
+<script>
+const $canvas = document.querySelector("#canvas");
+const $ctx = $canvas.getContext("2d");
+let realtime = 0, deltatime = 0;
+let Temps = 0;
+let espai = false;
+let salt = -1000, velxDreta = 500, velxEsquerra = -500, Gravetat = 2000;
+let HaEntrat = true, HaSortit = false;
+
+const Jugador = {
+x:20,
+y:20,
+amp:40,
+alt:40,
+color:"orange",
+velx:0,
+vely:1
+}
+
+const plataformes = [
+Plataforma1 = {x:20, y:600, amp:350, alt:40, color:"green"},
+Plataforma2 = {x:20, y:400, amp:500, alt:40, color:"green"},
+Plataforma3 = {x:450, y:600, amp:600, alt:40, color:"red"},
+Plataforma4 = {x:600, y:400, amp:600, alt:40, color:"red"},
+Plataforma5  = {x:20, y:200, amp:400, alt:40, color:"green"},
+Plataforma6 = {x:500, y:200, amp:600, alt:40, color:"red"},
+Plataforma7 = {x:700,y:380, amp:30, alt:20, color:"purple"}
+]
+
+
+
+class Plataforma {
+	constructor(x,y,amplada,altura,color){
+		$ctx.fillStyle = color;
+		$ctx.fillRect(x,y,amplada, altura);
+	}
+}
+
+class Triangle {
+	constructor(x,y,amplada,altura,color){
+		$ctx.fillStyle = color;
+		$ctx.fillRect(x,y,amplada, altura);
+	}
+}
+
+document.addEventListener("keydown", abaix, false);
+document.addEventListener("keyup", amunt, false);
+
+
+function abaix(e){
+	if(e.keyCode === 39) Jugador.velx = velxDreta;
+	else if(e.keyCode === 37) Jugador.velx = velxEsquerra;
+	if(e.keyCode === 32) espai = true;
+}
+
+function amunt(e){
+	if(e.keyCode === 39) Jugador.velx = 0;
+	else if(e.keyCode === 37) Jugador.velx = 0;
+	if(e.keyCode === 32) espai = false;
+}
+
+
+function gravetat(temps){
+	this.temps = temps;
+	return Math.pow(this.temps, 2) * Gravetat;
+}
+
+
+function loop(timestamp){
+	
+	if(timestamp){
+		$ctx.clearRect(0,0,$canvas.width, $canvas.height);
+		
+		$ctx.fillStyle = Jugador.color;
+		$ctx.fillRect(Jugador.x, Jugador.y, Jugador.amp, Jugador.alt);
+		const plataforma1 = new Plataforma(plataformes[0].x, plataformes[0].y, plataformes[0].amp, plataformes[0].alt, plataformes[0].color);
+		const plataforma2 = new Plataforma(plataformes[1].x, plataformes[1].y, plataformes[1].amp, plataformes[1].alt, plataformes[1].color);
+		const plataforma3 = new Plataforma(plataformes[2].x, plataformes[2].y, plataformes[2].amp, plataformes[2].alt, plataformes[2].color);
+		const plataforma4 = new Plataforma(plataformes[3].x, plataformes[3].y, plataformes[3].amp, plataformes[3].alt, plataformes[3].color);
+		const plataforma5 = new Plataforma(plataformes[4].x, plataformes[4].y, plataformes[4].amp, plataformes[4].alt, plataformes[4].color);
+		const plataforma6 = new Plataforma(plataformes[5].x, plataformes[5].y, plataformes[5].amp, plataformes[5].alt, plataformes[5].color);
+	    const plataforma7 = new Plataforma(plataformes[6].x, plataformes[6].y, plataformes[6].amp, plataformes[6].alt, plataformes[6].color);
+		
+		if(HaEntrat === true){
+			deltatime = (timestamp - realtime) / 1000;
+			Temps += deltatime;
+			realtime = timestamp;
+		}
+		else{
+		realtime;
+		}
+		
+		
+		
+		for(i of plataformes){
+			if(Jugador.y + Jugador.alt + deltatime * (Jugador.vely + gravetat(Temps)) >= i.y && 
+			Jugador.y + deltatime * (Jugador.vely + gravetat(Temps)) <= i.y + i.alt &&
+			Jugador.x + Jugador.amp >= i.x - Math.abs(Jugador.velx * deltatime) &&
+			Jugador.x <= i.x + i.amp + Math.abs(Jugador.velx * deltatime)){
+			//detecta plataforma a través totes les variables que s'incrementen a la variable Jugador.y, que fa posicionar el jugador. 
+			
+			//avança depepnent de si està a dalt o abaix
+			while(Jugador.y + Jugador.alt < i.y) Jugador.y += 0.1;
+			while(Jugador.y > i.y + i.alt) Jugador.y -= 0.1;
+			
+			/*tenint la variable Jugador.y amb el bon valor, ara toca fer la Jugador.x.
+			  Aquest tros de codi detecta (entra a l'if) si està a dintre l'interval de x que va desde la 
+			  posició de la part dreta del jugador fins a la part esquerra de una plataforma i també de l'altre costat.
+			  Quan entra a l'if incrementa Jugador.x fins a arribar a l'esquerra o dreta de la plataforma.
+			  Aquesta l'hem de detectar amb el valor absolut ja que si ho fessim normal passaria una cosa que ho explicaré amb un exemple:
+			  Si estem anant cap a la esquerra estant a dalt de la plataforma (volent que el codi quedi més poc abstracte) doncs hem de posar un menys (el de per aquí a baix) 
+			  i si no possessim el valor absolut, doncs es tornaria positiu el resultat aquest(- Math.abs(Jugador.velx * deltatime)) i volem que sigui negatiu
+			  perquè volem que detecti si està a l'esquerra de la x de alguna plataforma i no a la dreta.
+			*/
+			if((Jugador.x >= i.x + i.amp && Jugador.x <= i.x + i.amp + Math.abs(Jugador.velx * deltatime)) || (Jugador.x + Jugador.amp >= i.x - Math.abs(Jugador.velx * deltatime) && Jugador.x + Jugador.amp <= i.x)){
+				while(Jugador.x > i.x + i.amp) Jugador.x -= 0.1;
+				while(Jugador.x + Jugador.amp < i.x) Jugador.x += 0.1;
+			}
+			
+			//per fer els costats es fa aixis perque el jugador es impossible que arribi a 1 o -1 de dalt o baix de la plataforma respectivament.
+			
+			//costats
+			if(Jugador.y + Jugador.alt >= i.y + 1 && 
+			   Jugador.y <= i.y + i.alt - 1 &&
+			   Jugador.x + Jugador.amp >= i.x &&
+			   Jugador.x <= i.x + i.amp){
+				
+				
+			    Jugador.velx = 0;
+				
+				}
+			//per fer el dalt es així perque la part de baix del jugador sempre estarà per dalt de la y de la plataforma + 1	
+			//dalt	
+			else if(Jugador.y + Jugador.alt < i.y + 1){
+					
+					Jugador.vely = 0;
+					Temps = 0;
+					
+					if(espai === true && Jugador.y < i.y) Jugador.vely = salt;
+					
+					
+				}
+				
+			/*i com que la colisio on esta tot el codi comentat està dintre de un if que
+			indica que ha d'estar maxim la velocitat que té el jugador de lluny, doncs el que queda 
+			és la part de baix.
+			*/
+			
+			//baix	
+			else{
+					Temps = 0;
+					Jugador.y += 1;
+					Jugador.vely = 0;
+			}
+				
+				
+			}
+		}
+		
+		
+		/*for(i of triangles){
+			if(jugador.x >=  )
+		}
+		*/
+		
+		
+		
+		
+		
+		
+		//increment
+		Jugador.x += deltatime * Jugador.velx;
+		Jugador.y += deltatime * (Jugador.vely + gravetat(Temps));
+	}
+	
+	requestAnimationFrame(loop);
+}
+
+loop();
+	
+
+
+</script>
+</body>
+</html>
